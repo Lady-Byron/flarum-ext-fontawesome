@@ -13,48 +13,30 @@
 namespace Blomstra\FontAwesome;
 
 use Blomstra\FontAwesome\Content\Frontend;
-use Blomstra\FontAwesome\Providers\FontAwesomeLessImports;
-use Blomstra\FontAwesome\Providers\FontAwesomePreloads;
 use Flarum\Extend;
-use Illuminate\Contracts\Filesystem\Cloud;
-use Illuminate\Contracts\Filesystem\Factory;
 
 return [
+    // 仅注入前端资源（由 Frontend 决定是 kit .js、kit .css，还是本地 all.min.css）
     (new Extend\Frontend('forum'))
-        ->css(__DIR__.'/less/forum.less')
-        ->css(__DIR__.'/less/common.less')
         ->content(Frontend::class),
 
     (new Extend\Frontend('admin'))
         ->js(__DIR__.'/js/dist/admin.js')
-        ->css(__DIR__.'/less/admin.less')
-        ->css(__DIR__.'/less/common.less')
         ->content(Frontend::class),
 
+    // 语言包
     new Extend\Locales(__DIR__.'/locale'),
 
-    (new Extend\ServiceProvider())
-        ->register(FontAwesomePreloads::class)
-        ->register(FontAwesomeLessImports::class),
-
+    // 后台设置默认值
     (new Extend\Settings())
         ->default('blomstra-fontawesome.kitUrl', '')
         ->default('blomstra-fontawesome.type', 'free'),
 
-    (new Extend\Theme())
-        ->addCustomLessFunction('blomstra-fontawesome-font-urls', function ($style) {
-            /**
-             * @var Cloud
-             */
-            $disk = resolve(Factory::class)->disk('flarum-assets');
-            $uri = $disk->url('extensions/blomstra-fontawesome/fontawesome-6-free/fa-'.$style);
+    // == 重要变更 ==
+    // 1) 不再注册 v6 的 LESS 注入与自定义函数，避免再次生成 v6 的 @font-face：
+    // (new Extend\ServiceProvider())->register(FontAwesomeLessImports::class),
+    // (new Extend\Theme())->addCustomLessFunction('blomstra-fontawesome-font-urls', function (...) { ... }),
 
-            if ($style === 'solid') {
-                $uri .= '-900';
-            } else {
-                $uri .= '-400';
-            }
-
-            return "url('$uri.woff2') format('woff2'), url('$uri.ttf') format('truetype')";
-        })
+    // 2) 不再启用 v6 路径的预加载（若要预加载，请改到 webfonts 目录再单独实现）：
+    // (new Extend\ServiceProvider())->register(FontAwesomePreloads::class),
 ];
