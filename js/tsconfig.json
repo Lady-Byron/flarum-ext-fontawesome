@@ -1,19 +1,30 @@
 {
+  // 以 Flarum 官方 tsconfig 为基
   "extends": "flarum-tsconfig",
+
+  // 把核心 dist-typings 全部纳入（不只 @types 子目录）
   "include": [
     "src/**/*",
-    "../vendor/flarum/core/js/dist-typings/**/*.d.ts",  // <— 加：不只 @types，整套 d.ts
+    "../vendor/flarum/core/js/dist-typings/**/*.d.ts",
     "@types/**/*"
   ],
+
   "compilerOptions": {
+    // 只在你需要产出 d.ts 时会用到（见 workflow 的“Build typings”步骤）
+    "declaration": true,
     "declarationDir": "./dist-typings",
+
     "baseUrl": ".",
     "paths": {
+      // 让 import "flarum/..." 能指到 vendor 的核心类型
       "flarum/*": ["../vendor/flarum/core/js/dist-typings/*"]
     },
 
-    // 建议追加（覆盖 flarum-tsconfig 的默认）：
+    // 关键两项：用 Node 解析模块 & 跳过外部库声明检查
+    "moduleResolution": "Node",
     "skipLibCheck": true,
-    "moduleResolution": "Node"
+
+    // 一般够用了；如果你要在 TS 里用 import.meta 等，再加 ES2022
+    "lib": ["ES2020", "DOM"]
   }
 }
