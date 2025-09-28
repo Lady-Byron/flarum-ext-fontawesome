@@ -19,12 +19,30 @@ jobs:
         with:
           fetch-depth: 0
 
+      # -------- PHP & Composer：为拿到 vendor/flarum/core 的 dist-typings --------
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+          coverage: none
+
+      - name: Cache composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Composer install
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      # -------- Node 构建环境 --------
       - name: Use Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      # 可选：加个 npm 缓存，加速
       - name: Cache npm
         uses: actions/cache@v4
         with:
@@ -77,6 +95,27 @@ jobs:
             npm i
           fi
 
+      # 确保缺失的类型与库在 CI 中可用（不会写入 package.json）
+      - name: Ensure dev typings present (no-save)
+        working-directory: js
+        run: |
+          npm i --no-save \
+            typescript@4.9.5 \
+            mithril@^2 @types/mithril@^2 \
+            dayjs@^1 \
+            focus-trap@^7 \
+            @types/node@^18
+
+      # 生成 d.ts（匹配 js/tsconfig.json 的设置）
+      - name: Build typings (dist-typings)
+        working-directory: js
+        run: |
+          npx rimraf dist-typings || true
+          mkdir -p dist-typings
+          npx tsc -p tsconfig.json --emitDeclarationOnly
+          echo "== List dist-typings =="
+          ls -lah dist-typings || true
+
       - name: Build (flarum-webpack-config)
         working-directory: js
         env:
@@ -90,9 +129,7 @@ jobs:
         run: |
           echo "== List js/dist =="
           ls -lah js/dist || true
-
           test -f js/dist/forum.js || { echo "::error::js/dist/forum.js not found after build"; exit 1; }
-
           if [ "${{ env.HAS_ADMIN }}" = "true" ]; then
             test -f js/dist/admin.js || { echo "::error::js/dist/admin.js not found after build (admin entry exists)"; exit 1; }
           else
