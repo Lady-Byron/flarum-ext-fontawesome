@@ -10,33 +10,59 @@
  *
  */
 
-namespace Blomstra\FontAwesome;
+namespace Blomstra\FontAwesome\Content;
 
-use Blomstra\FontAwesome\Content\Frontend;
-use Flarum\Extend;
+use Flarum\Frontend\Document;
+use Flarum\Settings\SettingsRepositoryInterface;
 
-return [
-    // 仅注入前端资源（由 Frontend 决定是 kit .js、kit .css，还是本地 all.min.css）
-    (new Extend\Frontend('forum'))
-        ->content(Frontend::class),
+class Frontend
+{
+    /**
+     * @var SettingsRepositoryInterface
+     */
+    protected $settings;
 
-    (new Extend\Frontend('admin'))
-        ->js(__DIR__.'/js/dist/admin.js')
-        ->content(Frontend::class),
+    public function __construct(SettingsRepositoryInterface $settings)
+    {
+        $this->settings = $settings;
+    }
 
-    // 语言包
-    new Extend\Locales(__DIR__.'/locale'),
+    public function __invoke(Document $document): void
+    {
+        $type = (string) $this->settings->get('blomstra-fontawesome.type', 'free');
+        $kitUrl = trim((string) $this->settings->get('blomstra-fontawesome.kitUrl', ''));
 
-    // 后台设置默认值
-    (new Extend\Settings())
-        ->default('blomstra-fontawesome.kitUrl', '')
-        ->default('blomstra-fontawesome.type', 'free'),
+        // 1) 注入 v7：支持 .css（link）和 .js（kit）
+        if ($type === 'kit' && $kitUrl !== '') {
+            if (preg_match('/\.css(\?.*)?$/i', $kitUrl)) {
+                $document->head[] = '<link rel="stylesheet" href="'.htmlspecialchars($kitUrl, ENT_QUOTES, 'UTF-8').'" />';
+            } else {
+                $document->head[] = '<script src="'.htmlspecialchars($kitUrl, ENT_QUOTES, 'UTF-8').'" crossorigin="anonymous"></script>';
+            }
+        } else {
+            // 本地兜底到 v7 all.min.css（保持你当前的最小改动目录）
+            $localHref = '/assets/extensions/blomstra-fontawesome/fontawesome-6-free/css/all.min.css';
+            $document->head[] = '<link rel="stylesheet" href="'.htmlspecialchars($localHref, ENT_QUOTES, 'UTF-8').'" />';
+        }
 
-    // == 重要变更 ==
-    // 1) 不再注册 v6 的 LESS 注入与自定义函数，避免再次生成 v6 的 @font-face：
-    // (new Extend\ServiceProvider())->register(FontAwesomeLessImports::class),
-    // (new Extend\Theme())->addCustomLessFunction('blomstra-fontawesome-font-urls', function (...) { ... }),
+        // 2) 过滤掉核心 FA5 的字体预加载（避免同时加载 /assets/fonts/fa-*.woff2）
+        //    只移除针对 Font Awesome 的 font preload，不影响其它字体。
+        if (!empty($document->head)) {
+            $document->head = array_values(array_filter(
+                $document->head,
+                static function ($tag) {
+                    if (!is_string($tag)) return true;
 
-    // 2) 不再启用 v6 路径的预加载（若要预加载，请改到 webfonts 目录再单独实现）：
-    // (new Extend\ServiceProvider())->register(FontAwesomePreloads::class),
-];
+                    // 移除类似：<link rel="preload" as="font" href="/assets/fonts/fa-regular-400.woff2" ...>
+                    if (stripos($tag, 'rel="preload"') !== false
+                        && stripos($tag, 'as="font"') !== false
+                        && preg_match('~\/assets\/fonts\/fa-(?:regular-400|solid-900|brands-400)\.woff2~i', $tag)) {
+                        return false;
+                    }
+
+                    return true;
+                }
+            ));
+        }
+    }
+}
