@@ -1,3 +1,8 @@
+/* 引入 FA6 兼容聚合与字体 */
+@import "fa6.less";
+@import "faces.less";
+
+/* 原有样式保持 */
 .BlomstraFontAwesome-testPanel {
   padding: 12px;
   border-radius: @border-radius;
@@ -7,20 +12,13 @@
   legend {
     float: left;
     display: block;
-
-    + * {
-      clear: both;
-    }
+    + * { clear: both; }
   }
 
   &Entry {
     padding: 4px 8px;
-
     display: flex;
     align-items: center;
-
-    .icon {
-      margin-right: 16px;
-    }
+    .icon { margin-right: 16px; }
   }
 }
