@@ -1,13 +1,9 @@
 /*!
  * Font Awesome mixins (Flarum less.php 兼容版)
- * - 不使用 each()/map/%() 等高级语法
- * - 提供参数化 .fa-icon(@fa-var) 以匹配 _icons.less 的调用
- * - 内置 Duotone 双层内容支持（::before / ::after 同一码位）
+ * - 提供 .fa-icon(@fa-var) 给 _icons.less 调用
+ * - 内置 Duotone 双层（::before + ::after）
  */
 
-/* =========================
-   基础渲染（无参版本，保留原有兼容）
-   ========================= */
 .fa-icon() {
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
@@ -18,96 +14,21 @@
   line-height: 1;
 }
 
-/* 在 _sizing.less（兼容版）里会调用 */
 .fa-size(@font-size) {
-  // 将步进值换算为相对 em
   font-size: (@font-size / @fa-size-scale-base) * 1em;
-  // 恢复与父元素一致的行高
   line-height: (1 / @font-size) * 1em;
-  // 垂直居中
   vertical-align: ((6 / @font-size) - (3 / 8)) * 1em;
 }
 
-/* 仅屏幕阅读器可见 */
 .fa-sr-only() {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
+  position: absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0;
 }
-.fa-sr-only-focusable() {
-  &:not(:focus) { .fa-sr-only(); }
-}
+.fa-sr-only-focusable() { &:not(:focus) { .fa-sr-only(); } }
 
-/* =========================
-   关键：参数化通用图标混入（供 _icons.less 调用）
-   - 兼容所有家族：默认输出 ::before
-   - 若元素同时带有 .fa-duotone，则输出 ::after 作为第二层
-   ========================= */
+/* 关键：通用图标混入（_icons.less 调用） */
 .fa-icon(@fa-var) {
-  .fa-icon; // 复用基础渲染（无参版本）
+  .fa-icon;               // 复用基础渲染
   &::before { content: @fa-var; }
-  // Duotone 第二层（与 ::before 使用同一码位）
-  &.fa-duotone::after { content: @fa-var; }
-}
-
-/* =========================
-   家族便捷混入（保留原有用法；可选）
-   ========================= */
-.fa-icon-solid(@fa-var) {
-  .fa-icon;
-  .fa-solid;
-  &::before { content: @fa-var; }
-}
-.fa-icon-regular(@fa-var) {
-  .fa-icon;
-  .fa-regular;
-  &::before { content: @fa-var; }
-}
-.fa-icon-brands(@fa-var) {
-  .fa-icon;
-  .fa-brands;
-  &::before { content: @fa-var; }
-}
-
-/* 可选：Pro 家族便捷混入（若你在其它地方会直接调用） */
-.fa-icon-light(@fa-var) {
-  .fa-icon;
-  .fa-light;
-  &::before { content: @fa-var; }
-}
-.fa-icon-thin(@fa-var) {
-  .fa-icon;
-  .fa-thin;
-  &::before { content: @fa-var; }
-}
-.fa-icon-sharp-solid(@fa-var) {
-  .fa-icon;
-  .fa-sharp;
-  .fa-solid;
-  &::before { content: @fa-var; }
-}
-.fa-icon-sharp-regular(@fa-var) {
-  .fa-icon;
-  .fa-sharp;
-  .fa-regular;
-  &::before { content: @fa-var; }
-}
-.fa-icon-sharp-light(@fa-var) {
-  .fa-icon;
-  .fa-sharp;
-  .fa-light;
-  &::before { content: @fa-var; }
-}
-/* Duotone 专用便捷混入（等价于在元素上加 .fa-duotone 并使用 .fa-icon(@var)） */
-.fa-icon-duotone(@fa-var) {
-  .fa-icon;
-  .fa-duotone;
-  &::before { content: @fa-var; }
-  &::after  { content: @fa-var; }
+  &.fa-duotone::after { content: @fa-var; } // Duotone 第二层
 }
