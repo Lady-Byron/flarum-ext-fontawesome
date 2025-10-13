@@ -1,18 +1,167 @@
-name: FontAwesome 6 JS
+name: build-dist
 
-on: [workflow_dispatch, push, pull_request]
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  run:
-    uses: flarum/framework/.github/workflows/REUSABLE_frontend.yml@main
-    with:
-      enable_bundlewatch: false
-      enable_prettier: true
-      enable_typescript: false
+  build:
+    if: github.event_name == 'workflow_dispatch' || github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
 
-      frontend_directory: ./js
-      backend_directory: .
-      js_package_manager: yarn
-      main_git_branch: master
-    secrets:
-      bundlewatch_github_token: ${{ secrets.BUNDLEWATCH_GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ---------- PHP / Composer：拿到 vendor 的 dist-typings ----------
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer
+          coverage: none
+
+      - name: Cache composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Composer install
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      # ---------- Node / NPM ----------
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache npm
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('js/package-lock.json') }}
+          restore-keys: ${{ runner.os }}-node-
+
+      - name: Show versions
+        working-directory: js
+        run: |
+          node -v
+          npm -v
+
+      - name: Detect entrypoints (forum optional, admin optional)
+        id: detect
+        working-directory: js
+        run: |
+          HAS_FORUM=false
+          HAS_ADMIN=false
+
+          if [ -f forum.js ] || [ -f forum.ts ]; then
+            HAS_FORUM=true
+            if [ -f forum.js ]; then
+              echo "FORUM_ENTRY=forum.js" >> $GITHUB_ENV
+            else
+              echo "FORUM_ENTRY=forum.ts" >> $GITHUB_ENV
+            fi
+          else
+            echo "::notice::No js/forum.{js,ts}; forum bundle will be skipped."
+          fi
+
+          if [ -f admin.js ] || [ -f admin.ts ]; then
+            HAS_ADMIN=true
+            if [ -f admin.js ]; then
+              echo "ADMIN_ENTRY=admin.js" >> $GITHUB_ENV
+            else
+              echo "ADMIN_ENTRY=admin.ts" >> $GITHUB_ENV
+            fi
+          else
+            echo "::notice::No js/admin.{js,ts}; admin bundle will be skipped."
+          fi
+
+          echo "HAS_FORUM=$HAS_FORUM" >> $GITHUB_ENV
+          echo "HAS_ADMIN=$HAS_ADMIN" >> $GITHUB_ENV
+
+          if [ "$HAS_FORUM" = false ] && [ "$HAS_ADMIN" = false ]; then
+            echo "::error::No entrypoints found. Provide js/admin.{js,ts} or js/forum.{js,ts}."
+            exit 1
+          fi
+
+      - name: Install deps
+        working-directory: js
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm i
+          fi
+
+      # 确保 TS 与 d.ts 依赖在 CI 可用
+      - name: Ensure dev typings present (no-save)
+        working-directory: js
+        run: |
+          npm i --no-save \
+            typescript@4.9.5 \
+            mithril@^2 @types/mithril@^2 \
+            dayjs@^1 \
+            focus-trap@^7 \
+            @types/node@^18
+
+      # 生成 d.ts（若你不需要，可删除此步骤）
+      - name: Build typings (dist-typings)
+        working-directory: js
+        run: |
+          npx rimraf dist-typings || true
+          mkdir -p dist-typings
+          npx tsc -p tsconfig.json --emitDeclarationOnly
+          echo "== List dist-typings =="
+          ls -lah dist-typings || true
+
+      - name: Build (flarum-webpack-config)
+        working-directory: js
+        env:
+          CI: true
+        run: |
+          npx webpack --mode production
+          echo "== After build, list dist =="
+          ls -lah dist || true
+
+      - name: Assert dist produced
+        run: |
+          echo "== List js/dist =="
+          ls -lah js/dist || true
+          if [ "${{ env.HAS_FORUM }}" = "true" ]; then
+            test -f js/dist/forum.js || { echo "::error::js/dist/forum.js not found after build (forum entry exists)"; exit 1; }
+          else
+            echo "::notice::Skipping forum dist assertion."
+          fi
+          if [ "${{ env.HAS_ADMIN }}" = "true" ]; then
+            test -f js/dist/admin.js || { echo "::error::js/dist/admin.js not found after build (admin entry exists)"; exit 1; }
+          else
+            echo "::notice::Skipping admin dist assertion."
+          fi
+
+      - name: Commit dist (force add even if ignored)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f js/dist
+          if ! git diff --cached --quiet; then
+            git commit -m "build: update dist [skip ci]"
+            git push
+          else
+            echo "No changes to commit."
+          fi
+
+      - name: Upload dist as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: js-dist
+          path: js/dist
+
