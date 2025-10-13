@@ -1,26 +1,25 @@
 /*!
- * Font Awesome Pro 6.x — SOLID (Flarum-compatible)
+ * Font Awesome Pro 6.7.2 by @fontawesome - https://fontawesome.com
+ * License - https://fontawesome.com/license (Commercial License)
+ * Copyright 2024 Fonticons, Inc.
  */
 @import "_variables.less";
 
-/* 用 CSS 变量保留和上游一致的接口（可有可无） */
 :root, :host {
+  --@{fa-css-prefix}-style-family-classic: '@{fa-style-family}';
   --@{fa-css-prefix}-font-solid: normal 900 1em/1 '@{fa-style-family}';
 }
 
-/* 1) 指向 Pro 的 solid 字体文件 */
 @font-face {
   font-family: 'Font Awesome 6 Pro';
   font-style: normal;
   font-weight: 900;
   font-display: @fa-font-display;
   src: url('@{fa-font-path}/fa-solid-900.woff2') format('woff2'),
-       url('@{fa-font-path}/fa-solid-900.ttf') format('truetype');
+    url('@{fa-font-path}/fa-solid-900.ttf') format('truetype');
 }
 
-/* 2) 关键：把家族类切到 Pro 字体族 + 权重 */
 .fas,
 .@{fa-css-prefix}-solid {
-  font-family: 'Font Awesome 6 Pro';
   font-weight: 900;
 }
