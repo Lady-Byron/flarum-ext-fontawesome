@@ -1,7 +1,13 @@
-// mixins
-// --------------------------
+/*!
+ * Font Awesome mixins (Flarum less.php 兼容版)
+ * - 不使用 each()/map/%() 等高级语法
+ * - 提供参数化 .fa-icon(@fa-var) 以匹配 _icons.less 的调用
+ * - 内置 Duotone 双层内容支持（::before / ::after 同一码位）
+ */
 
-// base rendering for an icon
+/* =========================
+   基础渲染（无参版本，保留原有兼容）
+   ========================= */
 .fa-icon() {
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
@@ -12,16 +18,17 @@
   line-height: 1;
 }
 
-// sets relative font-sizing and alignment (in _sizing)
+/* 在 _sizing.less（兼容版）里会调用 */
 .fa-size(@font-size) {
-  font-size: (@font-size / @fa-size-scale-base) * 1em; // converts step in sizing scale into an em-based value that's relative to the scale's base
-  line-height: (1 / @font-size) * 1em; // sets the line-height of the icon back to that of it's parent
-  vertical-align: ((6 / @font-size) - (3 / 8)) * 1em; // vertically centers the icon taking into account the surrounding text's descender
+  // 将步进值换算为相对 em
+  font-size: (@font-size / @fa-size-scale-base) * 1em;
+  // 恢复与父元素一致的行高
+  line-height: (1 / @font-size) * 1em;
+  // 垂直居中
+  vertical-align: ((6 / @font-size) - (3 / 8)) * 1em;
 }
 
-// only display content to screen readers
-// see: https://www.a11yproject.com/posts/2013-01-11-how-to-hide-content/
-// see: https://hugogiraudel.com/2016/10/13/css-hide-and-seek/
+/* 仅屏幕阅读器可见 */
 .fa-sr-only() {
   position: absolute;
   width: 1px;
@@ -33,41 +40,74 @@
   white-space: nowrap;
   border-width: 0;
 }
-
-// use in conjunction with .sr-only to only display content when it's focused
 .fa-sr-only-focusable() {
-  &:not(:focus) {
-    .fa-sr-only();
-  }
+  &:not(:focus) { .fa-sr-only(); }
 }
 
-// convenience mixins for declaring pseudo-elements by CSS variable,
-// including all style-specific font properties, and both the ::before
-// and ::after elements in the duotone case.
+/* =========================
+   关键：参数化通用图标混入（供 _icons.less 调用）
+   - 兼容所有家族：默认输出 ::before
+   - 若元素同时带有 .fa-duotone，则输出 ::after 作为第二层
+   ========================= */
+.fa-icon(@fa-var) {
+  .fa-icon; // 复用基础渲染（无参版本）
+  &::before { content: @fa-var; }
+  // Duotone 第二层（与 ::before 使用同一码位）
+  &.fa-duotone::after { content: @fa-var; }
+}
+
+/* =========================
+   家族便捷混入（保留原有用法；可选）
+   ========================= */
 .fa-icon-solid(@fa-var) {
   .fa-icon;
   .fa-solid;
-
-  &::before {
-    content: @fa-var;
-  }
+  &::before { content: @fa-var; }
 }
-
 .fa-icon-regular(@fa-var) {
   .fa-icon;
   .fa-regular;
-
-  &::before {
-    content: @fa-var;
-  }
+  &::before { content: @fa-var; }
 }
-
 .fa-icon-brands(@fa-var) {
   .fa-icon;
   .fa-brands;
-
-  &::before {
-    content: @fa-var;
-  }
+  &::before { content: @fa-var; }
 }
 
+/* 可选：Pro 家族便捷混入（若你在其它地方会直接调用） */
+.fa-icon-light(@fa-var) {
+  .fa-icon;
+  .fa-light;
+  &::before { content: @fa-var; }
+}
+.fa-icon-thin(@fa-var) {
+  .fa-icon;
+  .fa-thin;
+  &::before { content: @fa-var; }
+}
+.fa-icon-sharp-solid(@fa-var) {
+  .fa-icon;
+  .fa-sharp;
+  .fa-solid;
+  &::before { content: @fa-var; }
+}
+.fa-icon-sharp-regular(@fa-var) {
+  .fa-icon;
+  .fa-sharp;
+  .fa-regular;
+  &::before { content: @fa-var; }
+}
+.fa-icon-sharp-light(@fa-var) {
+  .fa-icon;
+  .fa-sharp;
+  .fa-light;
+  &::before { content: @fa-var; }
+}
+/* Duotone 专用便捷混入（等价于在元素上加 .fa-duotone 并使用 .fa-icon(@var)） */
+.fa-icon-duotone(@fa-var) {
+  .fa-icon;
+  .fa-duotone;
+  &::before { content: @fa-var; }
+  &::after  { content: @fa-var; }
+}
