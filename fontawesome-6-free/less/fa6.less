@@ -1,0 +1,13 @@
+/*!
+ * FA6 aggregator (Flarum less.php 兼容入口)
+ * - 仅引入可编译的文件
+ * - 不使用官方 fontawesome.less 里会间接 import 的 each()/map 版本
+ */
+@import "_variables.less";   // 你已换为 Pro；末尾要覆盖 @fa-font-path
+@import "_mixins.less";      // 用下方“替换版”
+@import "_core.less";        // 你已换为 Pro 版 core.less
+
+/* 兼容版工具与映射（都用我们替换版/静态版） */
+@import "_sizing.less";
+@import "_list.less";
+@import "_icons.less";       // 你已合并“Pro 新图标映射”的静态表
