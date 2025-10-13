@@ -1,24 +1,35 @@
 {
-  // Use Flarum's tsconfig as a starting point
   "extends": "flarum-tsconfig",
-  // This will match all .ts, .tsx, .d.ts, .js, .jsx files in your `src` folder
-  // and also tells your Typescript server to read core's global typings for
-  // access to `dayjs` and `$` in the global namespace.
+
   "include": [
-      "src/**/*",
-      "../vendor/*/*/js/dist-typings/@types/**/*",
-// <CUSTOM-1>
-// </CUSTOM-1>
-      "@types/**/*"
-],
+    "src/**/*",
+    "../vendor/*/*/js/dist-typings/@types/**/*",
+    "node_modules/@types/**/*",
+    "@types/**/*"
+  ],
+
   "compilerOptions": {
-    // This will output typings to `dist-typings`
-    "declarationDir": "./dist-typings",
     "baseUrl": ".",
+    "declarationDir": "./dist-typings",
+
+    // 让第三方类型也能被解析到
+    "typeRoots": [
+      "./node_modules/@types",
+      "../vendor/flarum/core/js/dist-typings/@types"
+    ],
+    "types": ["node", "mithril", "dayjs"],
+
+    "moduleResolution": "Node",
+    "skipLibCheck": true,
+
     "paths": {
-      "flarum/*": ["../vendor/flarum/core/js/dist-typings/*"],
-// <CUSTOM-2>
-// </CUSTOM-2>
+      // 核心：flarum/* -> vendor/flarum/core/...
+      "flarum/*": ["../vendor/flarum/core/js/dist-typings/*"]
+
+      // 如需引用其它官方扩展的类型，按需再各自添加一行（每行只用一个 *）
+      // 例如：
+      // "flarum/tags/*": ["../vendor/flarum/tags/js/dist-typings/*"],
+      // "flarum/likes/*": ["../vendor/flarum/likes/js/dist-typings/*"]
     }
   }
 }
